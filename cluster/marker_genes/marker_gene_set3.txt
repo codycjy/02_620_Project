@@ -1,0 +1,22 @@
+# Excitatory:
+  SLC17A6
+  SLC17A7
+  SATB2
+
+# Inhibitory:
+  GAD1
+  GAD2
+
+# Microglia:
+  P2RY12
+  CSF1R
+  C3
+  CX3CR1
+
+# Oligodendrocytes:
+  OLIG2
+  MBP
+  MOBP
+  PLP1
+  MYRF
+  MAG
