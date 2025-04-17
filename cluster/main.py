@@ -1,105 +1,131 @@
 import argparse
+import os
+import pandas as pd
+import scanpy as sc
 import process
 import my_kmeans
 import cluster_markers
 import hdf5plugin
+
+
 def main():
     parser = argparse.ArgumentParser(description='Cell clustering based on marker genes')
-    
-    # Required parameters
-    parser.add_argument('--train_file', type=str, required=True,
-                        help='Path to training data file (e.g., AnnData h5ad file)')
-    parser.add_argument('--test_file', type=str, required=True,
-                        help='Path to test data file (e.g., AnnData h5ad file)')
-    parser.add_argument('--marker_file', type=str, required=True,
-                        help='Path to file containing marker gene names')
-    parser.add_argument('--meta_file', type=str, required=True,
-                        help='Path to metadata file with donor information')
-    
-    # Optional parameters with defaults
-    parser.add_argument('--n_samples_per_donor', type=int, default=100,
-                        help='Number of cells to sample from each donor (default: 100)')
-    parser.add_argument('--n_simulations', type=int, default=10,
-                        help='Number of sampling and clustering iterations (default: 50)')
-    parser.add_argument('--k', type=int, default=10,
-                        help='Number of clusters for k-means algorithm (default: 10)')
-    parser.add_argument('--random_state', type=int, default=42,
-                        help='Random seed for reproducibility (default: 42)')
-    parser.add_argument('--max_iterations', type=int, default=300,
-                        help='Maximum number of iterations for k-means (default: 300)')
-    parser.add_argument('--train_output', type=str, default='training_cell_count_summary.xlsx',
-                        help='Output file for training data cluster summary (default: training_cell_count_summary.xlsx)')
-    parser.add_argument('--test_output', type=str, default='test_cell_count_summary.xlsx',
-                        help='Output file for test data cluster summary (default: test_cell_count_summary.xlsx)')
-    
+
+    # Required
+    parser.add_argument('--marker_file', type=str, required=True)
+    parser.add_argument('--meta_file', type=str, required=True)
+    parser.add_argument('--combined_file', type=str, required=False)
+    parser.add_argument('--fold_dir', type=str, required=False, default="cv_splits")
+
+
+    # Optional preprocessing step
+    parser.add_argument('--generate_cv_splits', action='store_true', help='Generate cross-validation splits before clustering')
+    parser.add_argument('--n_folds', type=int, required=False,default=5, help='Number of folds for cross-validation')
+
+    # Clustering params
+    parser.add_argument('--n_samples_per_donor', type=int, default=100)
+    parser.add_argument('--n_simulations', type=int, default=10)
+    parser.add_argument('--k', type=int, default=10)
+    parser.add_argument('--random_state', type=int, default=42)
+    parser.add_argument('--max_iterations', type=int, default=300)
+
     args = parser.parse_args()
+
+    print("\n" + "=" * 50)
+    print("RUNNING WITH PARAMETERS:")
+    for k, v in vars(args).items():
+        print(f"{k:25s}: {v}")
+    print("=" * 50 + "\n")
+
+    if args.generate_cv_splits:
+        print("Generating cross-validation splits...")
+        # call your CV split function here, e.g.:
+        process.process_and_split_dataset(
+            args.meta_file, n_folds=args.n_folds, output_dir=args.fold_dir
+        )
+        print("CV splits generated.")
+        return
     
-    # Print all parameters before running
-    print("\n" + "="*50)
-    print("RUNNING WITH THE FOLLOWING PARAMETERS:")
-    print("="*50)
-    print(f"Train file:           {args.train_file}")
-    print(f"Test file:            {args.test_file}")
-    print(f"Marker file:          {args.marker_file}")
-    print(f"Metadata file:        {args.meta_file}")
-    print(f"Samples per donor:    {args.n_samples_per_donor}")
-    print(f"Number of simulations: {args.n_simulations}")
-    print(f"Number of clusters (k): {args.k}")
-    print(f"Random state:         {args.random_state}")
-    print(f"Max iterations:       {args.max_iterations}")
-    print(f"Train output file:    {args.train_output}")
-    print(f"Test output file:     {args.test_output}")
-    print("="*50 + "\n")
-    
-    # Parse marker genes and metadata
-    print("Parsing marker genes and metadata...")
+    # Parse marker and metadata
     marker_dict = process.parse_marker_gene_file(args.marker_file)
     meta_data = process.parse_meta_data(args.meta_file)
-    
-   
-    marker_list = []
-    for marker_type in marker_dict.keys():
-        marker_list.extend(marker_dict[marker_type])
-    # Parse dataset
-    print("Parsing dataset...")
-    train_data, test_data, donor_groups = process.parse_dataset(args.train_file, args.test_file, meta_data)
-    # Filter data to only include marker genes that are present in the dataset
-    marker_genes_present = [g for g in marker_list if g in train_data.var_names]
+    marker_list = [g for v in marker_dict.values() for g in v]
 
-    print(f"Found {len(marker_genes_present)} marker genes in the dataset out of {len(marker_list)} total markers")
-    
-    train_data = train_data[:, marker_genes_present]
-    test_data = test_data[:, marker_genes_present]
-    print(f"Training data shape after filtering: {train_data.shape}")
-    print(f"Test data shape after filtering: {test_data.shape}")
-    
-    # Cluster all data through multiple simulations
-    print(f"Running clustering with {args.n_simulations} simulations...")
-    all_means = cluster_markers.cluster_all_data(
-        train_data,
-        args.n_samples_per_donor,
-        args.n_simulations,
-        args.k,
-        args.random_state,
-        args.max_iterations
-    )
-    
-    # Perform final k-means clustering on the collected means
-    print("Performing final k-means clustering...")
-    final_means,_,_ = my_kmeans.k_means(all_means, args.k, args.max_iterations, args.random_state)
-    
-    # Create dictionary mapping cluster indices to mean vectors
-    cluster_means_dict = cluster_markers.create_cluster_means_dict(final_means)
-    
-    # Label datasets with clusters and generate summaries
-    print("Labeling datasets with clusters...")
-    labeled_train_data = cluster_markers.label_dataset_with_clusters(train_data, cluster_means_dict, args.train_output)
-    labeled_test_data = cluster_markers.label_dataset_with_clusters(test_data, cluster_means_dict, args.test_output)
-    
-    print(f"Clustering complete. Training data summary saved to {args.train_output}")
-    print(f"Test data summary saved to {args.test_output}")
-    
-    return labeled_train_data, labeled_test_data, cluster_means_dict
+    print("Loading combined dataset...")
+    adata = sc.read_h5ad(args.combined_file)
+    print("Combined dataset loaded.")
+
+    # Process all folds under args.fold_dir
+    fold_dirs = sorted([
+        os.path.join(args.fold_dir, d)
+        for d in os.listdir(args.fold_dir)
+        if os.path.isdir(os.path.join(args.fold_dir, d)) and d.startswith("fold")
+    ])
+
+    for fold_path in fold_dirs:
+        fold_name = os.path.basename(fold_path)
+        print(f"\nProcessing {fold_name}...")
+
+        train_donors_path = os.path.join(fold_path, 'train_donors.csv')
+        test_donors_path = os.path.join(fold_path, 'test_donors.csv')
+
+        if not os.path.exists(train_donors_path) or not os.path.exists(test_donors_path):
+            print(f"  Missing donor CSV files in {fold_path}. Skipping.")
+            continue
+
+        train_donors = pd.read_csv(train_donors_path)['Donor ID'].tolist()
+        test_donors = pd.read_csv(test_donors_path)['Donor ID'].tolist()
+
+        # Full data subsets (all genes)
+        train_full = adata[adata.obs['Donor ID'].isin(train_donors)]
+        test_full = adata[adata.obs['Donor ID'].isin(test_donors)]
+
+        # Marker genes only for clustering
+        marker_genes_present = [g for g in marker_list if g in train_full.var_names]
+        print(f"  Using {len(marker_genes_present)} marker genes")
+
+        train_marker = train_full[:, marker_genes_present]
+        test_marker = test_full[:, marker_genes_present]
+
+        print(f"  Train shape (marker only): {train_marker.shape}")
+        print(f"  Test shape  (marker only): {test_marker.shape}")
+
+        all_means = cluster_markers.cluster_all_data(
+            train_marker,
+            args.n_samples_per_donor,
+            args.n_simulations,
+            args.k,
+            args.random_state,
+            args.max_iterations
+        )
+
+        final_means, _, _ = my_kmeans.k_means(
+            all_means,
+            args.k,
+            args.max_iterations,
+            args.random_state
+        )
+
+        cluster_means_dict = cluster_markers.create_cluster_means_dict(final_means)
+
+        train_output_path = os.path.join(fold_path, "train_labeled.csv")
+        test_output_path = os.path.join(fold_path, "test_labeled.csv")
+
+        # Use full expression matrix to calculate per-cluster mean (over all genes),
+        # but use marker-based clustering
+        cluster_markers.label_dataset_with_clusters_marker_distance_all_genes_mean(
+            train_full, cluster_means_dict, marker_genes_present, train_output_path
+        )
+        cluster_markers.label_dataset_with_clusters_marker_distance_all_genes_mean(
+            test_full, cluster_means_dict, marker_genes_present, test_output_path
+        )
+
+        print(f"  Saved labeled data to:")
+        print(f"    -> {train_output_path}")
+        print(f"    -> {test_output_path}")
+
+    print("\nAll folds processed.")
+
 
 if __name__ == "__main__":
     main()

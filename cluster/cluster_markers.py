@@ -183,7 +183,7 @@ def label_dataset_with_clusters(dataset, cluster_means_dict, output_path=None):
             # For larger matrices, process in batches to avoid memory issues
             batch_size = 1000  # Adjust based on available memory
             n_cells = X.shape[0]
-            sample_data.obs['leiden'] = np.zeros(n_cells, dtype=str)  # Change to string type for cluster IDs
+            sample_data.obs['kmeans'] = np.zeros(n_cells, dtype=str)  # Change to string type for cluster IDs
             
             for batch_start in range(0, n_cells, batch_size):
                 batch_end = min(batch_start + batch_size, n_cells)
@@ -195,7 +195,7 @@ def label_dataset_with_clusters(dataset, cluster_means_dict, output_path=None):
                 
                 # Convert numeric indices to original cluster IDs
                 sample_data.obs.iloc[batch_start:batch_end, 
-                                    sample_data.obs.columns.get_loc('leiden')] = [
+                                    sample_data.obs.columns.get_loc('kmeans')] = [
                     cluster_ids[idx] for idx in cluster_assignments
                 ]
                 
@@ -206,16 +206,16 @@ def label_dataset_with_clusters(dataset, cluster_means_dict, output_path=None):
             # For small or already dense matrices
             distances = cdist(X, cluster_means_array, metric='euclidean')
             cluster_assignments = np.argmin(distances, axis=1)
-            sample_data.obs['leiden'] = [cluster_ids[idx] for idx in cluster_assignments]
+            sample_data.obs['kmeans'] = [cluster_ids[idx] for idx in cluster_assignments]
         
         # Count cells in each cluster for this donor
-        cluster_counts = sample_data.obs['leiden'].value_counts().to_dict()
+        cluster_counts = sample_data.obs['kmeans'].value_counts().to_dict()
         donor_cluster_counts[donor_id] = cluster_counts
         
         # Compute and store mean expression per cluster
         rows = []
-        for cluster in sample_data.obs['leiden'].unique():
-            cluster_cells = sample_data[sample_data.obs['leiden'] == cluster]
+        for cluster in sample_data.obs['kmeans'].unique():
+            cluster_cells = sample_data[sample_data.obs['kmeans'] == cluster]
             
             # Efficiently compute mean expression
             if hasattr(cluster_cells.X, "toarray"):
@@ -283,5 +283,201 @@ def label_dataset_with_clusters(dataset, cluster_means_dict, output_path=None):
         patient_cluster_expr_df.to_csv(output_path, index=False)
         print(f"Saved to '{output_path}'")
     
+    return patient_cluster_expr_df, cell_count_df
+
+def calculate_final_mean_results(adata, patient_cluster_expr_df, output_path=None):
+    """
+    Calculate the final mean expression results for all genes in the AnnData table
+    after labeling the dataset with clusters.
+    
+    Parameters:
+    -----------
+    adata : AnnData
+        The AnnData object containing gene expression data.
+    patient_cluster_expr_df : pandas.DataFrame
+        DataFrame containing sample IDs, cluster assignments, and mean expression values
+        as returned by label_dataset_with_clusters function.
+    output_path : str, optional
+        Path to save the resulting mean expression DataFrame. If None, only returns the DataFrame.
+        
+    Returns:
+    --------
+    final_mean_results : pandas.DataFrame
+        DataFrame containing the final mean expression values for all genes across clusters.
+    """
+    import pandas as pd
+    import numpy as np
+    import gc
+    from tqdm import tqdm
+    
+    print("Calculating final mean results for all genes...")
+    
+    # Extract gene names from AnnData if available
+    if hasattr(adata, 'var_names') and len(adata.var_names) > 0:
+        gene_names = adata.var_names.tolist()
+    else:
+        # If gene names not available, use generic feature names
+        gene_names = [f"feature_{i}" for i in range(adata.X.shape[1])]
+    
+    # Get unique clusters
+    clusters = patient_cluster_expr_df['cluster'].unique()
+    
+    # Initialize DataFrame for final results
+    final_mean_results = pd.DataFrame(index=gene_names)
+    
+    # Calculate mean expression for each cluster
+    for cluster in tqdm(clusters, desc="Processing clusters"):
+        # Filter data for current cluster
+        cluster_data = patient_cluster_expr_df[patient_cluster_expr_df['cluster'] == cluster]
+        
+        # Extract mean expression arrays and convert if they're stored as lists
+        mean_expr_arrays = []
+        for _, row in cluster_data.iterrows():
+            mean_expr = row['mean_expression']
+            # Convert to numpy array if stored as list
+            if isinstance(mean_expr, list):
+                mean_expr = np.array(mean_expr)
+            mean_expr_arrays.append(mean_expr)
+        
+        # Stack arrays and calculate overall mean
+        if mean_expr_arrays:
+            # Ensure all arrays have the same shape
+            if all(len(arr) == len(mean_expr_arrays[0]) for arr in mean_expr_arrays):
+                stacked_means = np.vstack(mean_expr_arrays)
+                cluster_final_mean = np.mean(stacked_means, axis=0)
+                
+                # Add to results DataFrame
+                final_mean_results[f"cluster_{cluster}"] = cluster_final_mean
+            else:
+                print(f"Warning: Inconsistent array lengths for cluster {cluster}")
+        
+        # Free memory
+        del mean_expr_arrays
+        gc.collect()
+    
+    # Calculate overall mean across all clusters
+    final_mean_results['overall_mean'] = final_mean_results.mean(axis=1)
+    
+    # Save results if output path is provided
+    if output_path:
+        print(f"Saving final mean results to {output_path}")
+        final_mean_results.to_csv(output_path)
+        print(f"Saved to '{output_path}'")
+    
+    return final_mean_results
+
+
+# Example usage:
+# 1. First run the clustering and labeling
+# adata = sc.read_h5ad("your_file.h5ad")
+# all_cluster_means = cluster_all_data(adata, n_samples_per_donor_id=100, n_simulations=10)
+# cluster_means_dict = create_cluster_means_dict(all_cluster_means)
+# patient_cluster_expr_df, cell_count_df = label_dataset_with_clusters(adata, cluster_means_dict)
+
+# 2. Then calculate the final mean results
+# final_mean_results = calculate_final_mean_results(adata, patient_cluster_expr_df, output_path="final_mean_results.csv")
+def label_dataset_with_clusters_marker_distance_all_genes_mean(
+    dataset, cluster_means_dict, marker_genes, output_path=None):
+    from scipy.spatial.distance import cdist
+
+    print("Starting dataset labeling with marker-gene-based cluster assignment...")
+    
+    cluster_ids = list(cluster_means_dict.keys())
+    marker_cluster_means_array = np.array([cluster_means_dict[cid] for cid in cluster_ids])
+    
+    patient_cluster_expr_df = pd.DataFrame()
+    sample_status = {}
+
+    if isinstance(dataset, str):
+        print(f"Loading dataset from {dataset}")
+        adata = sc.read_h5ad(dataset)
+    else:
+        adata = dataset
+
+    if 'Donor ID' not in adata.obs.columns:
+        print("Warning: 'Donor ID' column not found. Defaulting to filename or 'unknown_donor'.")
+        if hasattr(adata, 'filename') and adata.filename:
+            donor_id = adata.filename.split('/')[-1].split('.')[0]
+        else:
+            donor_id = "unknown_donor"
+        adata.obs['Donor ID'] = donor_id
+
+    donor_ids = adata.obs['Donor ID'].unique()
+    print(f"Found {len(donor_ids)} unique Donor IDs")
+
+    # Ensure marker genes are in dataset
+    valid_markers = [gene for gene in marker_genes if gene in adata.var_names]
+    marker_indices = [adata.var_names.get_loc(g) for g in valid_markers]
+
+    donor_cluster_counts = {donor_id: {} for donor_id in donor_ids}
+
+    for donor_id in tqdm(donor_ids, desc="Processing samples"):
+        sample_mask = adata.obs['Donor ID'] == donor_id
+        sample_data = adata[sample_mask].copy()
+
+        if 'Cognitive Status' in sample_data.obs.columns:
+            sample_status[donor_id] = sample_data.obs['Cognitive Status'].iloc[0]
+
+        X_marker = sample_data.X[:, marker_indices]
+        if hasattr(X_marker, "toarray"):
+            X_marker = X_marker.toarray()
+        
+        distances = cdist(X_marker, marker_cluster_means_array, metric='euclidean')
+        cluster_assignments = np.argmin(distances, axis=1)
+        sample_data.obs['kmeans'] = [cluster_ids[i] for i in cluster_assignments]
+
+        cluster_counts = sample_data.obs['kmeans'].value_counts().to_dict()
+        donor_cluster_counts[donor_id] = cluster_counts
+
+        # Compute means over all genes
+        rows = []
+        for cluster in sample_data.obs['kmeans'].unique():
+            cluster_cells = sample_data[sample_data.obs['kmeans'] == cluster]
+            X_all = cluster_cells.X
+            if hasattr(X_all, "toarray"):
+                mean_expr = np.array(X_all.mean(axis=0)).flatten()
+            else:
+                mean_expr = np.mean(X_all, axis=0)
+                if mean_expr.ndim > 1:
+                    mean_expr = mean_expr.flatten()
+            row_dict = {
+                'Donor ID': donor_id,
+                'cluster': cluster,
+                'mean_expression': mean_expr.tolist(),
+                'cell_count': len(cluster_cells),
+                'percent_cells': (len(cluster_cells) / len(sample_data)) * 100
+            }
+            rows.append(row_dict)
+
+        sample_df = pd.DataFrame(rows)
+        patient_cluster_expr_df = pd.concat([patient_cluster_expr_df, sample_df], ignore_index=True)
+
+        del sample_data, rows, sample_df
+        gc.collect()
+
+    if sample_status:
+        patient_cluster_expr_df['Cognitive Status'] = patient_cluster_expr_df['Donor ID'].map(sample_status)
+
+    cell_count_rows = []
+    for donor_id in donor_ids:
+        for cluster_id in cluster_ids:
+            count = donor_cluster_counts[donor_id].get(cluster_id, 0)
+            cell_count_rows.append({'Donor ID': donor_id, 'cluster': cluster_id, 'cell_count': count})
+
+    cell_count_df = pd.DataFrame(cell_count_rows)
+
+    if output_path:
+        cell_count_output = output_path.replace('.csv', '_cell_counts.csv')
+        print(f"Saving cell count matrix to {cell_count_output}")
+        cell_count_df.to_csv(cell_count_output, index=False)
+
+        pivot_df = cell_count_df.pivot(index='Donor ID', columns='cluster', values='cell_count').fillna(0)
+        pivot_output = output_path.replace('.csv', '_cell_counts_pivot.csv')
+        pivot_df.to_csv(pivot_output)
+        print(f"Saved pivot table to '{pivot_output}'")
+
+        print(f"Saving main results to {output_path}")
+        patient_cluster_expr_df.to_csv(output_path, index=False)
+
     return patient_cluster_expr_df, cell_count_df
 

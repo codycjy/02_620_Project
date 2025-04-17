@@ -12,6 +12,8 @@ This package provides a computational framework for analyzing single-cell RNA se
 - Label datasets with cluster assignments
 - Generate comprehensive cell count statistics and summaries
 - Evaluate clustering quality and parameter selection
+- Optionally perform stratified cross-validation splits by donor CASI scores
+- Automatically iterate clustering over all cross-validation folds
 
 ## Installation
 
@@ -28,21 +30,6 @@ This package provides a computational framework for analyzing single-cell RNA se
   - matplotlib
   - seaborn
 
-<!-- 
-### Setup
-
-1. Clone this repository:
-   ```
-   git clone https://github.com/yourusername/cell-clustering-tool.git
-   cd cell-clustering-tool
-   ```
-
-2. Install required packages:
-   ```
-   pip install -r requirements.txt
-   ```
--->
-
 ## Usage
 
 ### Quick Start
@@ -52,7 +39,6 @@ The easiest way to run the tool is using the provided shell script with default 
 ```bash
 ./run_clustering.sh --default
 ```
-
 
 ### Custom Parameters
 
@@ -68,14 +54,40 @@ For more control, you can specify custom parameters:
     --n_simulations 100 \
     --k 15
 ```
-Note that the files should be placed in the appropriate folder.
+
+### Generate Cross-Validation Folds
+
+To generate stratified cross-validation splits by donor CASI scores:
+
+```bash
+python main.py \
+    --generate_cv_splits \
+    --combined_file path/to/combined_dataset.h5ad \
+    --meta_file path/to/metadata.csv
+```
+
+This creates `cv_splits/fold_1`, `fold_2`, ..., each with training and test `.h5ad` files.
+
+### Run Clustering on All Folds
+
+To run clustering on all folds after split generation:
+
+```bash
+for fold in cv_splits/fold_*; do
+    python main.py \
+        --fold_dir "$fold" \
+        --marker_file marker_genes/marker_genes_set1.txt \
+        --meta_file path/to/metadata.csv
+    echo "Finished clustering for $fold"
+done
+```
 
 ### Available Parameters
 
 | Parameter | Description | Default |
 |-----------|-------------|---------|
-| `--train_file` | Path to training data (h5ad file) | Required |
-| `--test_file` | Path to test data (h5ad file) | Required |
+| `--train_file` | Path to training data (h5ad file) | Required unless `--fold_dir` used |
+| `--test_file` | Path to test data (h5ad file) | Required unless `--fold_dir` used |
 | `--marker_file` | Path to marker gene list file | Required |
 | `--meta_file` | Path to metadata file with donor information | Required |
 | `--n_samples_per_donor` | Number of cells to sample from each donor | 100 |
@@ -85,6 +97,10 @@ Note that the files should be placed in the appropriate folder.
 | `--max_iterations` | Maximum number of iterations for k-means | 300 |
 | `--train_output` | Output file for training data summary | training_cell_count_summary.xlsx |
 | `--test_output` | Output file for test data summary | test_cell_count_summary.xlsx |
+| `--generate_cv_splits` | Flag to generate CV folds only | False |
+| `--combined_file` | Input for CV splitting (h5ad) | Required if `--generate_cv_splits` |
+| `--n_folds` | Number of cross-validation folds | 5 |
+| `--fold_dir` | Path to a specific fold directory | Optional |
 
 ### Marker Gene File Format
 
@@ -120,85 +136,37 @@ Lines beginning with `#` indicate marker categories, and lines beginning with `/
 - `main.py`: Main entry point for the application
 - `cluster_markers.py`: Core clustering functionality
 - `process.py`: Data loading and preprocessing utilities
-- `my_kmeans`: Custom k-means implementation
+- `my_kmeans.py`: Custom k-means implementation
 - `checker.py`: Tools for evaluating clustering results
 - `marker_genes/`: Directory containing marker gene list files
+- `cv_splits/`: Auto-generated cross-validation fold data
 
 ## Output Files
 
 The tool generates several output files:
 
-- **Main cell count summaries**: CSV files with cluster assignments and cell counts
+- **Main cell count summaries**: Excel/CSV files with cluster assignments and cell counts
 - **Pivot tables**: Reorganized cell counts for easier visualization
 - **Diagnostic information**: Information on cluster quality and distribution
 
 ## Example
 
+
+Run through all folds:
+
 ```bash
-./run_clustering.sh \
-    --train_file data/combined_train.h5ad \
-    --test_file data/combined_test.h5ad \
-    --marker_file marker_genes/marker_genes_set1.txt \
-    --meta_file data/sea-ad_cohort_donor_metadata_072524.xlsx \
-    --n_samples_per_donor 200 \
-    --n_simulations 50 \
-    --k 7
+python3 main.py \
+  --generate_cv_splits \
+  --meta_file ../../data/sea-ad_cohort_donor_metadata_072524.xlsx \
+  --marker_file marker_genes/marker_genes_set1.txt
+  
+python3 main.py \    
+  --fold_dir cv_splits \
+  --marker_file marker_genes/marker_genes_set1.txt \
+  --meta_file ../../data/sea-ad_cohort_donor_metadata_072524.xlsx \
+  --combined_file ../../data/combined_corrected.h5ad
+
 ```
 
 Currently implementing checkpointing mechanisms.
 
-
-<!-- 
-## Methodology
-
-### Robust K-Means Clustering
-
-The tool implements a robust clustering approach:
-
-1. **Multiple Sampling**: For each simulation, cells are sampled from each donor
-2. **K-Means Clustering**: Each sampled dataset is clustered
-3. **Cluster Means Collection**: Means from all simulations are collected
-4. **Final Clustering**: A final k-means is performed on the collected means
-5. **Label Assignment**: Cells are assigned to clusters based on similarity to final means
-
-This approach helps mitigate the effects of donor-specific variation and improves the robustness of the clustering.
-
-## Selecting Optimal K
-
-The `checker.py` module includes functionality to help determine the optimal number of clusters:
-
-```python
-import checker
-import numpy as np
-
-# After running simulations and obtaining means
-checker.check_cluster_numbers(means, final_means)
-```
-
-This will generate plots for:
-- Within-Cluster Sum of Squares (WCSS) vs. K (Elbow Method)
-- Silhouette Scores vs. K
-
-## Performance Considerations
-
-- For large datasets, consider using a lower number of simulations
-- Memory usage increases with dataset size and number of clusters
-- The tool automatically implements batch processing for large datasets
-
-## Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-## License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
-
-## Acknowledgments
-
-- This tool was developed for analyzing single-cell RNA sequencing data in neurodegenerative disease research
-- Parts of the methodology were inspired by existing approaches in single-cell clustering
-
-## Contact
-
-For questions or support, please contact [your email or contact information].
--->
