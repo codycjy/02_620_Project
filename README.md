@@ -10,8 +10,8 @@ This folder contains Python scripts and data files used for preprocessing and an
     * The stability of the model's parameters (slope and intercept) is assessed to find reliable genes.
 
 * **`confounding_factor_analysis.ipynb`**:
-    * This script (`confounding_factor_analysis.ipynb`) analyzes how demographic factors (like sex, age, education) and race relate to whether someone has dementia[cite: 1].
-    * It uses logistic regression to model these relationships[cite: 1].
+    * This script (`confounding_factor_analysis.ipynb`) analyzes how demographic factors (like sex, age, education) and race relate to whether someone has dementia.
+    * It uses logistic regression to model these relationships.
 
 ## Data Files
 
@@ -19,7 +19,6 @@ This folder contains Python scripts and data files used for preprocessing and an
 
 * **`pseudobulk_data.csv`**: Contains gene expression data, with each row representing a donor and each column a gene[cite: 2].
 * **`meta_extracted.csv`**: Contains metadata about the donors, including PMI[cite: 2].
-* **`sea_ad_cohort_donor_metadata_072524.xlsx`**: An Excel file containing donor metadata used in the `confounding_factor_analysis.ipynb` script[cite: 1].
 * **`significant_genes.csv`**: A list of genes considered significant in the context of PMI analysis.
 
 ### Output Data
