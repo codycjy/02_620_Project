@@ -3,15 +3,15 @@
 This folder contains Python scripts and data files used for preprocessing and analyzing gene expression data, with a focus on examining the impact of post-mortem interval (PMI) and other confounding factors.
 
 ## Scripts
-
+* **`confounding_factor_analysis.ipynb`**:
+    * This script (`confounding_factor_analysis.ipynb`) analyzes how demographic factors (like sex, age, education) and race relate to whether someone has dementia.
+    * It uses logistic regression to model these relationships.
 * **`parameter_stability.ipynb`**:
     * This script (`parameter_stability.ipynb`) investigates how gene expression changes over time after death (post-mortem interval or PMI).
     * It uses linear regression to model this relationship and checks how stable the model is using cross-validation.
     * The stability of the model's parameters (slope and intercept) is assessed to find reliable genes.
 
-* **`confounding_factor_analysis.ipynb`**:
-    * This script (`confounding_factor_analysis.ipynb`) analyzes how demographic factors (like sex, age, education) and race relate to whether someone has dementia.
-    * It uses logistic regression to model these relationships.
+
 
 ## Data Files
 
