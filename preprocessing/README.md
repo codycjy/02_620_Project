@@ -1,4 +1,4 @@
-=# Leveraging SEA-AD for Identifying Gene Signatures and Vulnerable Cell Populations in Alzheimer's Disease
+# Leveraging SEA-AD for Identifying Gene Signatures and Vulnerable Cell Populations in Alzheimer's Disease
 
 ## Introduction
 
