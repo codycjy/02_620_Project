@@ -7,16 +7,12 @@ research approaches. Using the Seattle Alzheimer’s Disease Brain Cell Atlas
 Our methodology combined (1) data preprocessing, (2) hierarchical cell clustering, and (3) cell type-specific regression analysis.
 
 
+## Data
 
-## Data Resources
+Our raw data can be downloaded from the SEA-AD portal: [SEA-AD Brain Cell Atlas Download](https://portal.brain-map.org/explore/seattle-alzheimers-disease/seattle-alzheimers-disease-brain-cell-atlas-download?edit&language=en).
 
-The raw data for this research is available from the SEA-AD portal and includes:
+The data we used include the donor meta data [Donor Meta Data Download](https://brainmapportal-live-4cc80a57cd6e400d854-f7fdcae.divio-media.net/filer_public/b4/c7/b4c727e1-ede1-4c61-b2ee-bf1ae4a3ef68/sea-ad_cohort_donor_metadata_072524.xlsx) and processed 10x snRNAseq Data [snRNAseq Data Download](https://sea-ad-single-cell-profiling.s3.amazonaws.com/index.html#MTG/RNAseq/). It provides gene expression matrices from 1,240,908 nuclei derived from 84 aged donors representing the full AD severity spectrum, plus 5 younger neurotypical donors, by single nucleus RNA seq. 
 
-- **SEA-AD Brain Cell Atlas**: Available at [portal.brain-map.org](https://portal.brain-map.org/explore/seattle-alzheimers-disease/seattle-alzheimers-disease-brain-cell-atlas-download?edit&language=en)
-- **Donor Metadata**: [Donor Meta Data Download](https://brainmapportal-live-4cc80a57cd6e400d854-f7fdcae.divio-media.net/filer_public/b4/c7/b4c727e1-ede1-4c61-b2ee-bf1ae4a3ef68/sea-ad_cohort_donor_metadata_072524.xlsx)
-- **Processed 10x snRNAseq Data**: [snRNAseq Data Download](https://sea-ad-single-cell-profiling.s3.amazonaws.com/index.html#MTG/RNAseq/)
-
-Our dataset comprises gene expression matrices from 1,240,908 nuclei derived from 84 aged donors representing the full AD severity spectrum, plus 5 younger neurotypical donors, all processed using single nucleus RNA sequencing.
 
 ## Methodology
 
