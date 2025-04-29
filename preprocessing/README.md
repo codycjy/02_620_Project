@@ -50,13 +50,16 @@ Several scripts analyze and correct for potential confounding factors:
 - Uses linear regression with cross-validation to assess model stability
 - Evaluates parameter reliability to identify genes with consistent expression patterns
 
+#### Creating Pseudo-bulk Profiles
+- Apply `create_pseudo.py` to create pseudobulk for generating regression parameters.
+
 #### Regressing Out PMI Effects
 
 ```bash
 python3 regress_out.py
 ```
 
-This script removes the effects of PMI from gene expression data, ensuring that observed differences are related to disease state rather than technical artifacts.
+This script removes the effects of PMI from gene expression data, ensuring that observed differences are related to disease state rather than technical artifacts. And the anaylsis files are in `significant genes` folder and `validation results` foler.
 
 ### 3. Dual-Level Hierarchical Cell Clustering
 
