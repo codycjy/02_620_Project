@@ -1,116 +1,97 @@
+=# Leveraging SEA-AD for Identifying Gene Signatures and Vulnerable Cell Populations in Alzheimer's Disease
 
-# Leveraging SEA-AD for Identifying Gene Signatures and Vulnerable Cell Populations in Alzheimer’s Disease
+## Introduction
 
-Alzheimer’s disease affects brain cell types differently, requiring cell-specific
-research approaches. Using the Seattle Alzheimer’s Disease Brain Cell Atlas
-(SEA-AD) single-cell transcriptomic data, we identified robust disease-associated gene signatures across major brain cell types. 
+Alzheimer's disease affects different brain cell types in distinct ways, necessitating cell-specific research approaches. Our study utilizes the Seattle Alzheimer's Disease Brain Cell Atlas (SEA-AD) single-cell transcriptomic dataset to identify robust disease-associated gene signatures across major brain cell types. We've developed a comprehensive methodology that combines data preprocessing, hierarchical cell clustering, and cell type-specific regression analysis to reveal new insights into Alzheimer's pathology.
 
-Our methodology combined (1) data preprocessing, (2) hierarchical cell clustering, and (3) cell type-specific regression analysis.
+## Data Resources
 
+The raw data for this research is available from the SEA-AD portal and includes:
 
+- **SEA-AD Brain Cell Atlas**: Available at [portal.brain-map.org](https://portal.brain-map.org/explore/seattle-alzheimers-disease/seattle-alzheimers-disease-brain-cell-atlas-download?edit&language=en)
+- **Donor Metadata**: [Donor Meta Data Download](https://brainmapportal-live-4cc80a57cd6e400d854-f7fdcae.divio-media.net/filer_public/b4/c7/b4c727e1-ede1-4c61-b2ee-bf1ae4a3ef68/sea-ad_cohort_donor_metadata_072524.xlsx)
+- **Processed 10x snRNAseq Data**: [snRNAseq Data Download](https://sea-ad-single-cell-profiling.s3.amazonaws.com/index.html#MTG/RNAseq/)
 
-## Data
-Our raw data can be downloaded from the SEA-AD portal: [SEA-AD Brain Cell Atlas Download](https://portal.brain-map.org/explore/seattle-alzheimers-disease/seattle-alzheimers-disease-brain-cell-atlas-download?edit&language=en).
+Our dataset comprises gene expression matrices from 1,240,908 nuclei derived from 84 aged donors representing the full AD severity spectrum, plus 5 younger neurotypical donors, all processed using single nucleus RNA sequencing.
 
-The data we used include the donor meta data [Donor Meta Data Download](https://brainmapportal-live-4cc80a57cd6e400d854-f7fdcae.divio-media.net/filer_public/b4/c7/b4c727e1-ede1-4c61-b2ee-bf1ae4a3ef68/sea-ad_cohort_donor_metadata_072524.xlsx) and processed 10x snRNAseq Data [snRNAseq Data Download](https://sea-ad-single-cell-profiling.s3.amazonaws.com/index.html#MTG/RNAseq/). It provides gene expression matrices from 1,240,908 nuclei derived from 84 aged donors representing the full AD severity spectrum, plus 5 younger neurotypical donors, by single nucleus RNA seq. 
+## Methodology
 
+### 1. Data Preprocessing
 
+The preprocessing pipeline handles the large dataset efficiently through several key steps:
 
-## Preprocessing
+#### High Variance Gene Filtering
 
-Preprocessing the large dataset. Change the folder to `preprocessing` to run the code.
+```bash
+cd preprocessing
+python3 high_var_filter.py
+```
 
-### High Variance Subset
+This script identifies the subset of genes with high expression variance across samples, which are likely to be more informative for downstream analysis.
 
-run `python3 high_var_filter.py ` to get the index set of high variance genes.
+#### Applying the Filter
 
-### Apply the filter
+```bash
+python process.py <input_h5ad_file> <genes_file>
+```
 
-Usage: `python process.py <input_h5ad_file> <genes_file>`
-This will generate a new h5ad file with the high variance subset of genes.
+This generates a new h5ad file containing only the high-variance subset of genes, reducing dimensionality while preserving biological signal.
 
-# Data Preprocessing Scripts
+### 2. Confounding Factor Analysis
 
-This folder contains Python scripts and data files used for preprocessing and analyzing gene expression data, with a focus on examining the impact of post-mortem interval (PMI) and other confounding factors.
+Several scripts analyze and correct for potential confounding factors:
 
-## Scripts
-* **`confounding_factor_analysis.ipynb`**:
-    * This script (`confounding_factor_analysis.ipynb`) analyzes how demographic factors (like sex, age, education) and race relate to whether someone has dementia.
-    * It uses logistic regression to model these relationships.
-* **`parameter_stability.ipynb`**:
-    * This script (`parameter_stability.ipynb`) investigates how gene expression changes over time after death (post-mortem interval or PMI).
-    * It uses linear regression to model this relationship and checks how stable the model is using cross-validation.
-    * The stability of the model's parameters (slope and intercept) is assessed to find reliable genes.
+#### `confounding_factor_analysis.ipynb`
+- Analyzes how demographic factors (sex, age, education, race) relate to dementia status
+- Implements logistic regression modeling to quantify these relationships
 
+#### `parameter_stability.ipynb`
+- Investigates gene expression changes related to post-mortem interval (PMI)
+- Uses linear regression with cross-validation to assess model stability
+- Evaluates parameter reliability to identify genes with consistent expression patterns
 
+#### Regressing Out PMI Effects
 
-## Data Files
+```bash
+python3 regress_out.py
+```
 
-### Input Data
+This script removes the effects of PMI from gene expression data, ensuring that observed differences are related to disease state rather than technical artifacts.
 
-* **`pseudobulk_data.csv`**: Contains gene expression data, with each row representing a donor and each column a gene.
-* **`meta_extracted.csv`**: Contains metadata about the donors, including PMI.
-* **`significant_genes.csv`**: A list of genes considered significant in the context of PMI analysis.
+### 3. Dual-Level Hierarchical Cell Clustering
 
-### Output Data
+#### Setup
 
-* **`linear_params_73genes.csv`**: Contains parameters (slope and intercept) from the linear regression models for each gene.
-* **`cv_mse_73genes.csv`**: Contains cross-validation results (mean squared error) for each gene.
-* **`cv_intercept_73genes.csv`**: Contains cross-validation results for the intercept of the linear regression models.
-* **`cv_slope_73genes.csv`**: Contains cross-validation results for the slope of the linear regression models.
+```bash
+pip install -r requirements.txt
+```
 
-## Purpose
+The clustering analysis requires data to be placed in the `data` directory, which should be located in the same parent directory as the `code` folder.
 
-This folder provides scripts and data to:
+#### Coarse-Level Clustering
 
-* Analyze how gene expression is affected by the time after death.
-* Examine how factors like demographics and race are related to dementia.
-
-These analyses are important for understanding the complexities of gene expression in post-mortem studies and for identifying potential factors influencing cognitive decline.
-
-
-### Apply the regress out on PMI factors
-
-Run `python3 regress_out.py` to regress out the pmi factors from the data.
-Please make sure to set the correct path for the input and output files in the script.
-
-
-
-## Dual-Level Hierarchical Clustering
-
-Run dual-level hierarchical cell clustering.
-
-### Setup
-
-To run the code, the data should be put under the folder `data`, which is under the same parent directory as current `code` folder.
-
-1. Change the corresponding filename to get the code running properly.
-2. Install all required packages:
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-### Coarse-Level Clustering
-
-For coarse-level clustering, the results are contained in `kmeans_cv_splits` and `em_cv_splits` directories for simple analysis.
-
-Run the following to directly implement the overall workflow:
 ```bash
 cd coarse_clustering
 bash run_clustering.sh
 ```
 
-This will generate a `cv_splits` folder, ask you to select the cluster methods and store all corresponding files inside. 
+This workflow:
+1. Generates a `cv_splits` folder
+2. Prompts for cluster method selection
+3. Stores results in appropriate directories (`kmeans_cv_splits` or `em_cv_splits`)
 
 #### Analysis & Visualization
 
-`cell_count_analysis.py` and `coarse_analysis.py` contain the code to visualize the results.
-
-Example usage:
 ```bash
 python3 cell_count_analysis.py --method em
 ```
 
-### Fine-Level Clustering
+Additional visualization and analysis options are available in `coarse_analysis.py`.
 
-Fine clustering can be performed using the interactive `fine_cluster.ipynb` file. The results will be displayed interactively and saved in the designated folder.
+#### Fine-Level Clustering
+
+The interactive notebook `fine_cluster.ipynb` performs more granular clustering and visualizes results in real-time, with options to save the output to a designated folder.
+
+## Conclusion
+
+Our comprehensive analytical pipeline enables the identification of cell type-specific gene expression signatures in Alzheimer's disease. By accounting for technical and biological confounds and implementing a dual-level clustering approach, we can precisely characterize vulnerable cell populations and their associated molecular pathways, advancing our understanding of Alzheimer's disease pathophysiology.
