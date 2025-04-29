@@ -90,4 +90,4 @@ Additional visualization and analysis options are available in `coarse_analysis.
 
 #### Fine-Level Clustering
 
-The interactive notebook `fine_cluster.ipynb` performs more granular clustering and visualizes results in real-time, with options to save the output to a designated folder.
+Fine clustering can be performed using the interactive fine_cluster.ipynb file. The results will be displayed interactively and saved in the designated folder.
