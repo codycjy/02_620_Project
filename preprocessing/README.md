@@ -91,7 +91,3 @@ Additional visualization and analysis options are available in `coarse_analysis.
 #### Fine-Level Clustering
 
 The interactive notebook `fine_cluster.ipynb` performs more granular clustering and visualizes results in real-time, with options to save the output to a designated folder.
-
-## Conclusion
-
-Our comprehensive analytical pipeline enables the identification of cell type-specific gene expression signatures in Alzheimer's disease. By accounting for technical and biological confounds and implementing a dual-level clustering approach, we can precisely characterize vulnerable cell populations and their associated molecular pathways, advancing our understanding of Alzheimer's disease pathophysiology.
