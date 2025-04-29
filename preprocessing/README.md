@@ -1,8 +1,12 @@
-# Leveraging SEA-AD for Identifying Gene Signatures and Vulnerable Cell Populations in Alzheimer's Disease
+# Leveraging SEA-AD for Identifying Gene Signatures and Vulnerable Cell Populations in Alzheimer’s Disease
 
-## Introduction
+Alzheimer’s disease affects brain cell types differently, requiring cell-specific
+research approaches. Using the Seattle Alzheimer’s Disease Brain Cell Atlas
+(SEA-AD) single-cell transcriptomic data, we identified robust disease-associated gene signatures across major brain cell types. 
 
-Alzheimer's disease affects different brain cell types in distinct ways, necessitating cell-specific research approaches. Our study utilizes the Seattle Alzheimer's Disease Brain Cell Atlas (SEA-AD) single-cell transcriptomic dataset to identify robust disease-associated gene signatures across major brain cell types. We've developed a comprehensive methodology that combines data preprocessing, hierarchical cell clustering, and cell type-specific regression analysis to reveal new insights into Alzheimer's pathology.
+Our methodology combined (1) data preprocessing, (2) hierarchical cell clustering, and (3) cell type-specific regression analysis.
+
+
 
 ## Data Resources
 
