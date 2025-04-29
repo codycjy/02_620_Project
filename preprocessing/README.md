@@ -63,34 +63,43 @@ This script removes the effects of PMI from gene expression data, ensuring that 
 
 ### 3. Dual-Level Hierarchical Cell Clustering
 
-#### Setup
+Run dual-level hierarchical cell clustering.
 
-```bash
-pip install -r requirements.txt
-```
+### Setup
 
-The clustering analysis requires data to be placed in the `data` directory, which should be located in the same parent directory as the `code` folder.
+To run the code, the data should be put under the folder `data`, which is under the same parent directory as current `code` folder.
 
-#### Coarse-Level Clustering
+1. Change the corresponding filename (and filepath) to get the code running properly.
+
+2. Install all required packages:
+
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+### Coarse-Level Clustering
+
+For coarse-level clustering, the results are contained in `kmeans_cv_splits` and `em_cv_splits` directories for simple analysis.
+
+Run the following to directly implement the overall workflow:
 
 ```bash
 cd coarse_clustering
 bash run_clustering.sh
 ```
 
-This workflow:
-1. Generates a `cv_splits` folder
-2. Prompts for cluster method selection
-3. Stores results in appropriate directories (`kmeans_cv_splits` or `em_cv_splits`)
+This will generate a `cv_splits` folder, ask you to select the cluster methods and store all corresponding files inside. 
 
 #### Analysis & Visualization
+
+`cell_count_analysis.py` and `coarse_analysis.py` contain the code to visualize the results.
+
+Example usage:
 
 ```bash
 python3 cell_count_analysis.py --method em
 ```
 
-Additional visualization and analysis options are available in `coarse_analysis.py`.
+### Fine-Level Clustering
 
-#### Fine-Level Clustering
-
-Fine clustering can be performed using the interactive fine_cluster.ipynb file. The results will be displayed interactively and saved in the designated folder.
+Fine clustering can be performed using the interactive `fine_cluster.ipynb` file. The results will be displayed interactively and saved in the designated folder.
