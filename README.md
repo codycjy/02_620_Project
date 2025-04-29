@@ -44,7 +44,7 @@ Run dual-level hierarchical cell clustering.
 
 To run the code, the data should be put under the folder `data`, which is under the same parent directory as current `code` folder.
 
-1. Change the corresponding filename to get the code running properly.
+1. Change the corresponding filename (and filepath) to get the code running properly.
 
 2. Install all required packages:
 
